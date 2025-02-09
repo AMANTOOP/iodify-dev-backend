@@ -48,6 +48,40 @@ app.get("/api/search", (req, res) => {
   res.json(results);
 });
 
+app.get("/api/global-search", async (req, res) => {
+  try {
+      const query = req.query.query;
+      if (!query) {
+          return res.status(400).json({ error: "Query parameter is required" });
+      }
+
+      const saavanUrl = `https://saavn.dev/api/search/songs?query=${encodeURIComponent(query)}`;
+      const response = await fetch(saavanUrl);
+      const data = await response.json();
+
+      if (!data?.data?.results?.length) {
+          return res.status(404).json({ error: "No results found" });
+      }
+
+      const formattedResults = data.data.results.map((song) => ({
+          id: song.id,
+          name: song.name,
+          url: song.downloadUrl[4]?.url || song.downloadUrl[0]?.url,
+          image: song.image[1]?.url || song.image[0]?.url,
+          primaryArtists: song.artists.primary
+        ? song.artists.primary.map((artist) => artist.name).join(", ")
+        : "Unknown",
+      }));
+
+      res.json(formattedResults);
+      // console.log(formattedResults);
+  } catch (error) {
+      console.error("Error fetching data:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
