@@ -52,4 +52,19 @@ const searchSongByName = async (req, res) => {
     }
   };
 
-module.exports = { saveSongs, getSongs, searchSongByName};
+//find songs in db with id for playlist
+const searchSongById = async (req, res) => {
+  try {
+    const { songIds } = req.body
+    if (!songIds || !Array.isArray(songIds)) {
+      return res.status(400).json({ message: "Invalid song IDs" })
+    }
+
+    // Fetch songs from MongoDB using their IDs
+    const songs = await Song.find({ id: { $in: songIds } })
+    res.json(songs)
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching songs", error: error.message })
+  }
+};
+module.exports = { saveSongs, getSongs, searchSongByName, searchSongById };
