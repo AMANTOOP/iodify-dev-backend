@@ -72,15 +72,31 @@ router.post("/:id/songs", authMiddleware, async (req, res) => {
 
 // Remove song from playlist
 router.delete("/:id/songs/:songId", authMiddleware, async (req, res) => {
+  const { songId } = req.params;
+
+  // Ensure songId is a string
+  if (!songId || typeof songId !== "string") {
+    return res.status(400).json({ message: "Invalid song ID" });
+  }
+
   const playlist = await Playlist.findOne({ _id: req.params.id, userId: req.userId });
 
-  if (!playlist) return res.status(404).json({ message: "Playlist not found" });
+  if (!playlist) {
+    return res.status(404).json({ message: "Playlist not found" });
+  }
 
-  playlist.songs = playlist.songs.filter(song => song.songId !== req.params.songId);
+  // Check if song exists in the playlist
+  if (!playlist.songs.includes(songId)) {
+    return res.status(400).json({ message: "Song not found in the playlist" });
+  }
+
+  // Remove song from playlist
+  playlist.songs = playlist.songs.filter(id => id !== songId);
   await playlist.save();
 
-  res.json(playlist);
+  res.json({ message: "Song removed successfully", playlist });
 });
+
 
 // Delete a playlist
 router.delete("/:id", authMiddleware, async (req, res) => {
