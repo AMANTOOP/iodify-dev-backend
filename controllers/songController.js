@@ -67,4 +67,34 @@ const searchSongById = async (req, res) => {
     res.status(500).json({ message: "Error fetching songs", error: error.message })
   }
 };
-module.exports = { saveSongs, getSongs, searchSongByName, searchSongById };
+
+//song recommendations
+const getRecommendations = async (req, res) => {
+  try {
+    const { songId } = req.params; // Get song ID from request body
+    if (!songId) {
+      return res.status(400).json({ message: "Invalid song ID" });
+    }
+
+    // Fetch the song from MongoDB
+    const currentSong = await Song.findOne({ id: songId });
+    if (!currentSong) {
+      return res.status(404).json({ message: "Song not found" });
+    }
+
+    // Extract artists from comma-separated string
+    const artistArray = currentSong.primaryArtists.split(",").map(artist => artist.trim());
+
+    // Fetch recommended songs with at least one matching artist
+    const recommendedSongs = await Song.find({
+      primaryArtists: { $regex: artistArray.join("|"), $options: "i" },
+      id: { $ne: songId }, // Exclude the current song
+    }).limit(30);
+
+    res.json(recommendedSongs);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching recommendations", error: error.message });
+  }
+};
+
+module.exports = { saveSongs, getSongs, searchSongByName, searchSongById, getRecommendations };

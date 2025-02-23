@@ -8,6 +8,8 @@ const fs = require("fs");
 const authRoutes = require("./routes/auth");
 const playlistRoutes = require("./routes/playlists");
 const songRoutes = require("./routes/songRoutes");
+const userRoutes = require("./routes/users");
+const messageRoutes = require("./routes/messages");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -20,6 +22,8 @@ app.use(express.json());
 app.use("/api", songRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/playlists", playlistRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/messages", messageRoutes);
 
 // Connect to MongoDB & Start Server
 connectDB();
@@ -96,6 +100,33 @@ app.get("/api/global-search/search", async (req, res) => {
       console.error("Error fetching data:", error);
       res.status(500).json({ error: "Internal Server Error" });
   }
+});
+
+const http = require("http");
+const { Server } = require("socket.io");
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: "*" }
+});
+
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+
+  socket.on("sendMessage", async (data) => {
+    const { sender, receiver, message } = data;
+
+    // Save message in DB
+    const newMessage = new Message({ sender, receiver, message });
+    await newMessage.save();
+
+    // Send message in real-time
+    io.emit("receiveMessage", newMessage);
+  });
+  socket.broadcast.emit("receiveMessage", message);
+  socket.on("disconnect", () => {
+    console.log("User disconnected");
+  });
 });
 
 
